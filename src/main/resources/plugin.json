@@ -1,0 +1,16 @@
+{
+	"schemaVersion": 1,
+	"name": "PDF Quick Viewer",
+	"id": "dev.nuclr.plugin.core.quickviewer.pdf",
+	"version": "1.0.0",
+	"description": "A quick viewer for PDF files.",
+	"author": "Nuclr Development Team",
+	"license": "Apache-2.0",
+	"website": "https://nuclr.dev",
+	"pageUrl": "https://nuclr.dev/plugins/core/pdf-quick-viewer.html",
+	"docUrl": "https://nuclr.dev/plugins/core/pdf-quick-viewer.html",
+	"type": "Official",
+	"quickViewProviders": [
+		"dev.nuclr.plugin.core.quick.viewer.PdfQuickViewProvider"
+	]
+}
