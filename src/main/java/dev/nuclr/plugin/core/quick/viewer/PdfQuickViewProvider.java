@@ -1,5 +1,7 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import dev.nuclr.plugin.QuickViewItem;
 import dev.nuclr.plugin.QuickViewProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ public class PdfQuickViewProvider implements QuickViewProvider {
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("pdf");
 
     private PdfQuickViewPanel panel;
+    private volatile AtomicBoolean currentCancelled;
 
     // -------------------------------------------------------- QuickViewProvider
 
@@ -44,14 +47,17 @@ public class PdfQuickViewProvider implements QuickViewProvider {
     }
 
     @Override
-    public boolean open(QuickViewItem item) {
+    public boolean open(QuickViewItem item, AtomicBoolean cancelled) {
+        if (currentCancelled != null) currentCancelled.set(true);
+        this.currentCancelled = cancelled;
         getPanel(); // ensure panel is initialised
         log.info("Opening PDF quick view: {}", item.name());
-        return panel.load(item);
+        return panel.load(item, cancelled);
     }
 
     @Override
     public void close() {
+        if (currentCancelled != null) currentCancelled.set(true);
         if (panel != null) {
             panel.clear();
         }

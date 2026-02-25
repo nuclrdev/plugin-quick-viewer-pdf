@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Swing panel that displays a PDF quick view.
@@ -107,7 +108,8 @@ public class PdfQuickViewPanel extends JPanel {
      * Load a new PDF item. Called from the framework (EDT).
      * Returns true always; actual success/failure is reported asynchronously.
      */
-    public boolean load(QuickViewItem item) {
+    public boolean load(QuickViewItem item, AtomicBoolean cancelled) {
+        if (cancelled.get()) return false;
         requestFocusInWindow();
         setLoading();
         renderService.loadDocument(item, this::onRenderResult, this::onError);
