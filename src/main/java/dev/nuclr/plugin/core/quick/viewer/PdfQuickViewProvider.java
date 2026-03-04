@@ -2,6 +2,7 @@ package dev.nuclr.plugin.core.quick.viewer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.nuclr.plugin.PluginTheme;
 import dev.nuclr.plugin.QuickViewItem;
 import dev.nuclr.plugin.QuickViewProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class PdfQuickViewProvider implements QuickViewProvider {
 
     private PdfQuickViewPanel panel;
     private volatile AtomicBoolean currentCancelled;
+    private PluginTheme theme;
 
     // -------------------------------------------------------- QuickViewProvider
 
@@ -41,9 +43,18 @@ public class PdfQuickViewProvider implements QuickViewProvider {
     public JComponent getPanel() {
         if (panel == null) {
             panel = new PdfQuickViewPanel();
+            panel.applyTheme(theme);
             log.info("PdfQuickViewPanel created");
         }
         return panel;
+    }
+
+    @Override
+    public void applyTheme(PluginTheme theme) {
+        this.theme = theme;
+        if (panel != null) {
+            panel.applyTheme(theme);
+        }
     }
 
     @Override

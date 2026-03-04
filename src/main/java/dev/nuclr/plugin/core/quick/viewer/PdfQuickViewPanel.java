@@ -1,8 +1,5 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
-import dev.nuclr.plugin.QuickViewItem;
-import lombok.extern.slf4j.Slf4j;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
@@ -11,6 +8,10 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import dev.nuclr.plugin.PluginTheme;
+import dev.nuclr.plugin.QuickViewItem;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Swing panel that displays a PDF quick view.
@@ -42,14 +43,21 @@ public class PdfQuickViewPanel extends JPanel {
     private final JButton   nextButton;
     private final JLabel    pageLabel;
     private final JCheckBox overlayCheck;
+    private final JPanel    toolbar;
     private final PageCanvas pageCanvas;
+
+    private Color canvasBackground = Color.BLACK;
+    private Color toolbarBackground = new Color(0x2B2B2B);
+    private Color secondaryForeground = new Color(0xAAAAAA);
+    private Color overlayBackground = new Color(0, 0, 0, 168);
+    private Color overlayForeground = new Color(0xDDDDDD);
 
     // ============================================================ constructor
 
     public PdfQuickViewPanel() {
         this.renderService = new PdfRenderService();
         setLayout(new BorderLayout());
-        setBackground(Color.BLACK);
+        setBackground(canvasBackground);
         setFocusable(true);
 
         // ---------- toolbar
@@ -62,13 +70,13 @@ public class PdfQuickViewPanel extends JPanel {
         nextButton.setFocusable(false);
         overlayCheck.setFocusable(false);
 
-        pageLabel.setForeground(new Color(0xAAAAAA));
-        overlayCheck.setForeground(new Color(0xAAAAAA));
+        pageLabel.setForeground(secondaryForeground);
+        overlayCheck.setForeground(secondaryForeground);
         overlayCheck.setOpaque(false);
         overlayCheck.setBorderPainted(false);
 
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4));
-        toolbar.setBackground(new Color(0x2B2B2B));
+        toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4));
+        toolbar.setBackground(toolbarBackground);
         toolbar.add(prevButton);
         toolbar.add(pageLabel);
         toolbar.add(nextButton);
@@ -100,6 +108,37 @@ public class PdfQuickViewPanel extends JPanel {
         });
 
         updateNavigation();
+    }
+
+    public void applyTheme(PluginTheme theme) {
+        if (theme == null) {
+            return;
+        }
+
+        canvasBackground = theme.color("Panel.background", canvasBackground);
+        toolbarBackground = theme.color("TableHeader.background", toolbarBackground);
+        secondaryForeground = theme.color("Label.foreground", secondaryForeground);
+        Color overlayBase = theme.color("PopupMenu.background", overlayBackground);
+        overlayBackground = new Color(
+                overlayBase.getRed(),
+                overlayBase.getGreen(),
+                overlayBase.getBlue(),
+                168);
+        overlayForeground = theme.color("Panel.foreground", overlayForeground);
+
+        setBackground(canvasBackground);
+        toolbar.setBackground(toolbarBackground);
+        pageLabel.setForeground(secondaryForeground);
+        overlayCheck.setForeground(secondaryForeground);
+        pageCanvas.setBackground(canvasBackground);
+
+        Font defaultFont = theme.defaultFont();
+        pageLabel.setFont(defaultFont);
+        overlayCheck.setFont(defaultFont);
+        prevButton.setFont(defaultFont);
+        nextButton.setFont(defaultFont);
+
+        repaint();
     }
 
     // ============================================================ public API
@@ -188,7 +227,7 @@ public class PdfQuickViewPanel extends JPanel {
     private class PageCanvas extends JPanel {
 
         PageCanvas() {
-            setBackground(Color.BLACK);
+            setBackground(canvasBackground);
             setOpaque(true);
         }
 
@@ -244,7 +283,7 @@ public class PdfQuickViewPanel extends JPanel {
         }
 
         private void drawCenteredMessage(Graphics2D g2, String msg) {
-            g2.setColor(new Color(0x888888));
+            g2.setColor(secondaryForeground);
             g2.setFont(getFont().deriveFont(Font.PLAIN, 14f));
             FontMetrics fm = g2.getFontMetrics();
             int x = (getWidth()  - fm.stringWidth(msg)) / 2;
@@ -272,11 +311,11 @@ public class PdfQuickViewPanel extends JPanel {
             int by = margin;
 
             // Semi-transparent background
-            g2.setColor(new Color(0, 0, 0, 168));
+            g2.setColor(overlayBackground);
             g2.fillRoundRect(bx, by, boxW, boxH, 8, 8);
 
             // Text
-            g2.setColor(new Color(0xDDDDDD));
+            g2.setColor(overlayForeground);
             for (int i = 0; i < lines.length; i++) {
                 g2.drawString(lines[i], bx + pad, by + pad + fm.getAscent() + i * lineH);
             }
