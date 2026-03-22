@@ -109,7 +109,7 @@ This runs `mvn clean verify` and copies the signed ZIP and `.sig` to `commander/
 ## Architecture
 
 ```
-PdfQuickViewProvider          implements QuickViewProvider
+PdfQuickViewProvider          implements QuickViewProviderPlugin
 └── PdfQuickViewPanel         Swing JPanel — all state is EDT-only
     └── PdfRenderService      virtual-thread orchestrator
         ├── PdfPageCache      thread-safe LRU (LinkedHashMap, access-order)

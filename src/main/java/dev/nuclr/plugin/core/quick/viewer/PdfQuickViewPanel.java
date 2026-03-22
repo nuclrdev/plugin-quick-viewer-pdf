@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.nuclr.plugin.PluginPathResource;
 import dev.nuclr.plugin.PluginTheme;
-import dev.nuclr.plugin.QuickViewItem;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -147,7 +147,7 @@ public class PdfQuickViewPanel extends JPanel {
      * Load a new PDF item. Called from the framework (EDT).
      * Returns true always; actual success/failure is reported asynchronously.
      */
-    public boolean load(QuickViewItem item, AtomicBoolean cancelled) {
+    public boolean load(PluginPathResource item, AtomicBoolean cancelled) {
         if (cancelled.get()) return false;
         requestFocusInWindow();
         setLoading();

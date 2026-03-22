@@ -1,16 +1,17 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
-import dev.nuclr.plugin.QuickViewItem;
-import dev.nuclr.plugin.core.quick.viewer.backend.CliBackend;
-import dev.nuclr.plugin.core.quick.viewer.backend.PdfRenderBackend;
-import dev.nuclr.plugin.core.quick.viewer.backend.PdfboxBackend;
-import lombok.extern.slf4j.Slf4j;
-
-import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import javax.swing.SwingUtilities;
+
+import dev.nuclr.plugin.PluginPathResource;
+import dev.nuclr.plugin.core.quick.viewer.backend.CliBackend;
+import dev.nuclr.plugin.core.quick.viewer.backend.PdfRenderBackend;
+import dev.nuclr.plugin.core.quick.viewer.backend.PdfboxBackend;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Orchestrates PDF loading, page rendering, LRU caching, and request cancellation.
@@ -60,7 +61,7 @@ public class PdfRenderService {
      * Load a new PDF document and render its first page.
      * Cancels any in-flight load or render.
      */
-    public void loadDocument(QuickViewItem item,
+    public void loadDocument(PluginPathResource item,
                              Consumer<RenderResult> onSuccess,
                              Consumer<String> onError) {
         long myEpoch = requestEpoch.incrementAndGet();
@@ -121,11 +122,11 @@ public class PdfRenderService {
 
     // ----------------------------------------------------- internal load flow
 
-    private void doLoad(QuickViewItem item, long myEpoch,
+    private void doLoad(PluginPathResource item, long myEpoch,
                         Consumer<RenderResult> onSuccess,
                         Consumer<String> onError) {
         try {
-            log.info("Loading PDF: {}", item.name());
+            log.info("Loading PDF: {}", item.getName());
 
             // Read bytes off EDT (may involve network/slow FS)
             byte[] pdfBytes;
@@ -169,7 +170,7 @@ public class PdfRenderService {
                 SwingUtilities.invokeLater(() -> onError.accept("Encrypted PDF \u2013 cannot preview"));
             }
         } catch (Exception e) {
-            log.error("Failed to load PDF: {}", item.name(), e);
+            log.error("Failed to load PDF: {}", item.getName(), e);
             if (requestEpoch.get() == myEpoch) {
                 fallbackLoad(item, myEpoch, onSuccess, onError);
             }
@@ -177,7 +178,7 @@ public class PdfRenderService {
     }
 
     /** Retry with PDFBox when an optional CLI backend fails. */
-    private void fallbackLoad(QuickViewItem item, long myEpoch,
+    private void fallbackLoad(PluginPathResource item, long myEpoch,
                               Consumer<RenderResult> onSuccess,
                               Consumer<String> onError) {
         if (activeBackend instanceof PdfboxBackend) {
@@ -185,7 +186,7 @@ public class PdfRenderService {
             SwingUtilities.invokeLater(() -> onError.accept("Cannot render PDF"));
             return;
         }
-        log.warn("Primary backend failed; falling back to PDFBox for {}", item.name());
+        log.warn("Primary backend failed; falling back to PDFBox for {}", item.getName());
         try {
             byte[] pdfBytes;
             try (var in = item.openStream()) {
@@ -227,7 +228,7 @@ public class PdfRenderService {
                 SwingUtilities.invokeLater(() -> onError.accept("Encrypted PDF \u2013 cannot preview"));
             }
         } catch (Exception ex) {
-            log.error("PDFBox fallback also failed for {}", item.name(), ex);
+            log.error("PDFBox fallback also failed for {}", item.getName(), ex);
             if (requestEpoch.get() == myEpoch) {
                 SwingUtilities.invokeLater(() -> onError.accept("Cannot render PDF: " + ex.getMessage()));
             }
@@ -306,7 +307,7 @@ public class PdfRenderService {
         };
     }
 
-    private static String computeDocId(QuickViewItem item) {
-        return item.name() + ":" + item.sizeBytes();
+    private static String computeDocId(PluginPathResource item) {
+        return item.getName() + ":" + item.getSizeBytes();
     }
 }
