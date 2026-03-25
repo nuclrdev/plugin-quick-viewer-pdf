@@ -1,12 +1,18 @@
-# PDF Quick Viewer
+# PDF Quick Viewer 📄
 
 A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in the quick-view panel. Press **Ctrl+Q** on any `.pdf` file to preview it without leaving the file manager.
 
 ---
 
-## Features
+## Preview 🖼️
 
-- **Page-accurate rendering** — every page is rasterised to a crisp RGB image via Apache PDFBox
+![PDF Quick Viewer screenshot](images/screenshot-1.jpg)
+
+---
+
+## Features ✨
+
+- **Page-accurate rendering** — every page is rasterized to a crisp RGB image via Apache PDFBox
 - **Page navigation** — move between pages with on-screen buttons or keyboard shortcuts
 - **Info overlay** — semi-transparent HUD showing title, author, page count, PDF version, and render DPI
 - **LRU page cache** — recently viewed pages are kept in memory so navigation feels instant
@@ -17,7 +23,7 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 
 ---
 
-## Keyboard Shortcuts
+## Keyboard Shortcuts ⌨️
 
 | Key | Action |
 |-----|--------|
@@ -30,7 +36,7 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 
 ---
 
-## Settings
+## Settings ⚙️
 
 Settings are stored as a plain `.properties` file in the platform config directory:
 
@@ -71,7 +77,7 @@ pdf.quickView.showInfoOverlay=true
 
 ---
 
-## Building
+## Building 🛠️
 
 Requires **Java 21+** and **Maven 3.9+**. The plugin SDK must be installed first:
 
@@ -106,7 +112,7 @@ This runs `mvn clean verify` and copies the signed ZIP and `.sig` to `commander/
 
 ---
 
-## Architecture
+## Architecture 🧱
 
 ```
 PdfQuickViewProvider          implements QuickViewProviderPlugin
@@ -120,12 +126,12 @@ PdfQuickViewProvider          implements QuickViewProviderPlugin
             └── CliBackend         MuPDF / Poppler / Ghostscript
 ```
 
-### Threading model
+### Threading model 🧵
 
 - **EDT** — UI state reads/writes, Swing repaints, button callbacks
 - **Virtual threads** (`Thread.ofVirtual()`) — byte reading, document opening, page rendering
 - **Cancellation** — a monotonic `AtomicLong` epoch is incremented on every new request; any virtual thread that finishes late sees the stale epoch and silently discards its result
-- **Backend lock** — a `ReentrantLock` serialises `openDocument` and `renderPage` calls on the active backend, preventing concurrent access to a non-thread-safe `PDFRenderer`
+- **Backend lock** — a `ReentrantLock` serializes `openDocument` and `renderPage` calls on the active backend, preventing concurrent access to a non-thread-safe `PDFRenderer`
 
 ### Bundled dependencies (in `lib/`)
 
@@ -138,6 +144,6 @@ PdfQuickViewProvider          implements QuickViewProviderPlugin
 
 ---
 
-## License
+## License 📄
 
 Apache 2.0 — see [LICENSE](LICENSE).
