@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 import javax.swing.SwingUtilities;
 
-import dev.nuclr.plugin.PluginPathResource;
+import dev.nuclr.platform.plugin.NuclrResourcePath;
 import dev.nuclr.plugin.core.quick.viewer.backend.CliBackend;
 import dev.nuclr.plugin.core.quick.viewer.backend.PdfRenderBackend;
 import dev.nuclr.plugin.core.quick.viewer.backend.PdfboxBackend;
@@ -61,7 +61,7 @@ public class PdfRenderService {
      * Load a new PDF document and render its first page.
      * Cancels any in-flight load or render.
      */
-    public void loadDocument(PluginPathResource item,
+    public void loadDocument(NuclrResourcePath item,
                              Consumer<RenderResult> onSuccess,
                              Consumer<String> onError) {
         long myEpoch = requestEpoch.incrementAndGet();
@@ -122,7 +122,7 @@ public class PdfRenderService {
 
     // ----------------------------------------------------- internal load flow
 
-    private void doLoad(PluginPathResource item, long myEpoch,
+    private void doLoad(NuclrResourcePath item, long myEpoch,
                         Consumer<RenderResult> onSuccess,
                         Consumer<String> onError) {
         try {
@@ -178,7 +178,7 @@ public class PdfRenderService {
     }
 
     /** Retry with PDFBox when an optional CLI backend fails. */
-    private void fallbackLoad(PluginPathResource item, long myEpoch,
+    private void fallbackLoad(NuclrResourcePath item, long myEpoch,
                               Consumer<RenderResult> onSuccess,
                               Consumer<String> onError) {
         if (activeBackend instanceof PdfboxBackend) {
@@ -307,7 +307,7 @@ public class PdfRenderService {
         };
     }
 
-    private static String computeDocId(PluginPathResource item) {
+    private static String computeDocId(NuclrResourcePath item) {
         return item.getName() + ":" + item.getSizeBytes();
     }
 }

@@ -1,7 +1,13 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
@@ -9,8 +15,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import dev.nuclr.plugin.PluginPathResource;
-import dev.nuclr.plugin.PluginTheme;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+
+import dev.nuclr.platform.NuclrThemeScheme;
+import dev.nuclr.platform.plugin.NuclrResourcePath;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -110,7 +124,7 @@ public class PdfQuickViewPanel extends JPanel {
         updateNavigation();
     }
 
-    public void applyTheme(PluginTheme theme) {
+    public void applyTheme(NuclrThemeScheme theme) {
         if (theme == null) {
             return;
         }
@@ -147,7 +161,7 @@ public class PdfQuickViewPanel extends JPanel {
      * Load a new PDF item. Called from the framework (EDT).
      * Returns true always; actual success/failure is reported asynchronously.
      */
-    public boolean load(PluginPathResource item, AtomicBoolean cancelled) {
+    public boolean load(NuclrResourcePath item, AtomicBoolean cancelled) {
         if (cancelled.get()) return false;
         requestFocusInWindow();
         setLoading();

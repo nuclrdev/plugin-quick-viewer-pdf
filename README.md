@@ -83,7 +83,7 @@ Requires **Java 21+** and **Maven 3.9+**. The plugin SDK must be installed first
 
 ```bash
 # 1. Install the SDK (one-time)
-cd ../../..   # → nuclr/sources/plugins-sdk
+cd ../../..   # → nuclr/sources/platform-sdk
 mvn clean install
 
 # 2. Build the plugin ZIP (no signing)
