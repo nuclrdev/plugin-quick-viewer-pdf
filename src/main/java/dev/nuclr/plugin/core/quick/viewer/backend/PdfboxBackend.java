@@ -10,6 +10,11 @@ import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 import java.awt.image.BufferedImage;
+import java.util.Iterator;
+
+import javax.imageio.ImageIO;
+import javax.imageio.spi.IIORegistry;
+import javax.imageio.spi.ImageReaderSpi;
 
 /**
  * PDF rendering backend using Apache PDFBox 3.x.
@@ -17,6 +22,8 @@ import java.awt.image.BufferedImage;
  */
 @Slf4j
 public class PdfboxBackend implements PdfRenderBackend {
+
+    private static volatile boolean imageIoProvidersRegistered;
 
     private PDDocument document;
     private PDFRenderer renderer;
@@ -34,6 +41,7 @@ public class PdfboxBackend implements PdfRenderBackend {
     @Override
     public PdfDocumentInfo openDocument(byte[] pdfBytes) throws Exception {
         closeDocument();
+        ensureImageIoProvidersRegistered();
         try {
             document = Loader.loadPDF(pdfBytes);
         } catch (InvalidPasswordException e) {
@@ -75,5 +83,43 @@ public class PdfboxBackend implements PdfRenderBackend {
 
     private static String sanitize(String s) {
         return (s != null && !s.isBlank()) ? s.trim() : null;
+    }
+
+    private static void ensureImageIoProvidersRegistered() {
+        if (imageIoProvidersRegistered) {
+            return;
+        }
+        synchronized (PdfboxBackend.class) {
+            if (imageIoProvidersRegistered) {
+                return;
+            }
+
+            ClassLoader pluginClassLoader = PdfboxBackend.class.getClassLoader();
+            Thread thread = Thread.currentThread();
+            ClassLoader previousContextLoader = thread.getContextClassLoader();
+
+            try {
+                thread.setContextClassLoader(pluginClassLoader);
+                ImageIO.scanForPlugins();
+                registerDiscoveredProviders(pluginClassLoader);
+                imageIoProvidersRegistered = true;
+            } finally {
+                thread.setContextClassLoader(previousContextLoader);
+            }
+        }
+    }
+
+    private static void registerDiscoveredProviders(ClassLoader pluginClassLoader) {
+        IIORegistry registry = IIORegistry.getDefaultInstance();
+        Iterator<ImageReaderSpi> providers =
+                java.util.ServiceLoader.load(ImageReaderSpi.class, pluginClassLoader).iterator();
+
+        while (providers.hasNext()) {
+            try {
+                registry.registerServiceProvider(providers.next(), ImageReaderSpi.class);
+            } catch (Throwable t) {
+                log.debug("Skipping ImageIO provider registration: {}", t.getMessage());
+            }
+        }
     }
 }

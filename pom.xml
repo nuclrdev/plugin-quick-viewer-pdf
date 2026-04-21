@@ -47,7 +47,13 @@
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
-			<version>3.0.3</version>
+			<version>3.0.7</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>jbig2-imageio</artifactId>
+			<version>3.0.4</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 
@@ -86,7 +92,6 @@
 							<!-- Optional: if you *never* want the SDK bundled -->
 							<!--
 							<excludeArtifactIds>platform-sdk</excludeArtifactIds> -->
-
 							<!-- Keep names clean -->
 							<stripVersion>false</stripVersion>
 						</configuration>
