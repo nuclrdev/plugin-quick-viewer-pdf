@@ -13,11 +13,12 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 ## Features ✨
 
 - **Page-accurate rendering** — every page is rasterized to a crisp RGB image via Apache PDFBox
-- **Page navigation** — move between pages with on-screen buttons or keyboard shortcuts
+- **Page navigation** — move between pages with on-screen buttons, keyboard shortcuts, or a direct page-number jump
 - **Info overlay** — semi-transparent HUD showing title, author, page count, PDF version, and render DPI
 - **LRU page cache** — recently viewed pages are kept in memory so navigation feels instant
 - **Cancellation-aware** — switching files mid-render immediately aborts the in-flight job; no stale frames ever reach the UI
 - **Encrypted PDF handling** — password-protected files display a clear message instead of crashing
+- **JBIG2 support** — bundled `jbig2-imageio` support allows PDFBox to render scanned PDFs that use JBIG2-compressed images
 - **Optional CLI backends** — can delegate rendering to MuPDF, Poppler, or Ghostscript when installed; falls back to PDFBox automatically on any failure
 - **Persistent settings** — DPI, overlay toggle, and backend choice survive restarts
 
@@ -31,8 +32,11 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 | `→` / `↓` / `Page Down` | Next page |
 | `Home` | First page |
 | `End` | Last page |
+| `Ctrl+G` | Prompt for a page number and jump within the valid range |
 
 > The quick-view panel must have focus for keyboard shortcuts to work. Click the panel or press **Ctrl+Q** to focus it.
+
+You can also click the `Go to` button or the page label in the toolbar to enter a page number manually.
 
 ---
 
@@ -137,10 +141,11 @@ PdfQuickViewProvider          implements QuickViewProviderPlugin
 
 | Artifact | Version | License |
 |----------|---------|---------|
-| `pdfbox` | 3.0.3 | Apache 2.0 |
-| `pdfbox-io` | 3.0.3 | Apache 2.0 |
-| `fontbox` | 3.0.3 | Apache 2.0 |
-| `commons-logging` | 1.3.3 | Apache 2.0 |
+| `pdfbox` | 3.0.7 | Apache 2.0 |
+| `pdfbox-io` | 3.0.7 | Apache 2.0 |
+| `fontbox` | 3.0.7 | Apache 2.0 |
+| `commons-logging` | 1.3.5 | Apache 2.0 |
+| `jbig2-imageio` | 3.0.4 | Apache 2.0 |
 
 ---
 

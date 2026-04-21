@@ -10,6 +10,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +21,7 @@ import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -55,6 +58,7 @@ public class PdfQuickViewPanel extends JPanel {
 
     private final JButton   prevButton;
     private final JButton   nextButton;
+    private final JButton   goToButton;
     private final JLabel    pageLabel;
     private final JCheckBox overlayCheck;
     private final JPanel    toolbar;
@@ -78,13 +82,16 @@ public class PdfQuickViewPanel extends JPanel {
         prevButton  = new JButton("\u25C0");  // ◀
         nextButton  = new JButton("\u25B6");  // ▶
         pageLabel   = new JLabel("", SwingConstants.CENTER);
+        goToButton  = new JButton("Go to");
         overlayCheck = new JCheckBox("Info", settings.isShowInfoOverlay());
 
         prevButton.setFocusable(false);
         nextButton.setFocusable(false);
+        goToButton.setFocusable(false);
         overlayCheck.setFocusable(false);
 
         pageLabel.setForeground(secondaryForeground);
+        pageLabel.setToolTipText("Click to jump to a page");
         overlayCheck.setForeground(secondaryForeground);
         overlayCheck.setOpaque(false);
         overlayCheck.setBorderPainted(false);
@@ -94,6 +101,7 @@ public class PdfQuickViewPanel extends JPanel {
         toolbar.add(prevButton);
         toolbar.add(pageLabel);
         toolbar.add(nextButton);
+        toolbar.add(goToButton);
         toolbar.add(Box.createHorizontalStrut(16));
         toolbar.add(overlayCheck);
         add(toolbar, BorderLayout.SOUTH);
@@ -105,9 +113,16 @@ public class PdfQuickViewPanel extends JPanel {
         // ---------- listeners
         prevButton.addActionListener(e -> navigatePage(-1));
         nextButton.addActionListener(e -> navigatePage(1));
+        goToButton.addActionListener(e -> promptForPage());
         overlayCheck.addActionListener(e -> {
             settings.setShowInfoOverlay(overlayCheck.isSelected());
             pageCanvas.repaint();
+        });
+        pageLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                promptForPage();
+            }
         });
 
         addKeyListener(new KeyAdapter() {
@@ -118,6 +133,7 @@ public class PdfQuickViewPanel extends JPanel {
                 if (code == KeyEvent.VK_RIGHT || code == KeyEvent.VK_DOWN || code == KeyEvent.VK_PAGE_DOWN) navigatePage(+1);
                 if (code == KeyEvent.VK_HOME) goToPage(0);
                 if (code == KeyEvent.VK_END && currentInfo != null) goToPage(currentInfo.pageCount() - 1);
+                if (code == KeyEvent.VK_G && e.isControlDown()) promptForPage();
             }
         });
 
@@ -151,6 +167,7 @@ public class PdfQuickViewPanel extends JPanel {
         overlayCheck.setFont(defaultFont);
         prevButton.setFont(defaultFont);
         nextButton.setFont(defaultFont);
+        goToButton.setFont(defaultFont);
 
         repaint();
     }
@@ -228,11 +245,53 @@ public class PdfQuickViewPanel extends JPanel {
         renderService.renderPage(bounded, this::onRenderResult, this::onError);
     }
 
+    private void promptForPage() {
+        if (currentInfo == null) {
+            return;
+        }
+
+        int totalPages = currentInfo.pageCount();
+        String input = JOptionPane.showInputDialog(
+                this,
+                "Enter page number (1-" + totalPages + ")",
+                Integer.toString(currentPageIndex + 1));
+
+        if (input == null) {
+            return;
+        }
+
+        String trimmed = input.trim();
+        if (trimmed.isEmpty()) {
+            showPageValidationError(totalPages);
+            return;
+        }
+
+        try {
+            int requestedPage = Integer.parseInt(trimmed);
+            if (requestedPage < 1 || requestedPage > totalPages) {
+                showPageValidationError(totalPages);
+                return;
+            }
+            goToPage(requestedPage - 1);
+        } catch (NumberFormatException ex) {
+            showPageValidationError(totalPages);
+        }
+    }
+
+    private void showPageValidationError(int totalPages) {
+        JOptionPane.showMessageDialog(
+                this,
+                "Enter a page number between 1 and " + totalPages + ".",
+                "Invalid Page",
+                JOptionPane.WARNING_MESSAGE);
+    }
+
     private void updateNavigation() {
         boolean hasDoc = currentInfo != null;
         int total = hasDoc ? currentInfo.pageCount() : 0;
         prevButton.setEnabled(hasDoc && currentPageIndex > 0);
         nextButton.setEnabled(hasDoc && currentPageIndex < total - 1);
+        goToButton.setEnabled(hasDoc);
         pageLabel.setText(hasDoc ? "Page " + (currentPageIndex + 1) + " / " + total : "");
     }
 
