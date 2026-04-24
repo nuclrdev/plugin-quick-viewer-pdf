@@ -4,6 +4,8 @@ import dev.nuclr.plugin.core.quick.viewer.PdfDocumentInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,6 +31,8 @@ public class CliBackend implements PdfRenderBackend {
         final String exe;
         Tool(String exe) { this.exe = exe; }
     }
+
+    private static final int MAX_DIMENSION = 2048;
 
     private final Tool tool;
     private Path tempPdfFile;
@@ -110,7 +114,7 @@ public class CliBackend implements PdfRenderBackend {
             BufferedImage img = ImageIO.read(outPng.toFile());
             Files.deleteIfExists(outPng);
             if (img == null) throw new IOException(tool.exe + " produced an unreadable image");
-            return img;
+            return scaledIfNeeded(img);
         } finally {
             Files.deleteIfExists(outBase);
         }
@@ -125,6 +129,25 @@ public class CliBackend implements PdfRenderBackend {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private static BufferedImage scaledIfNeeded(BufferedImage img) {
+        int w = img.getWidth();
+        int h = img.getHeight();
+        if (w <= MAX_DIMENSION && h <= MAX_DIMENSION) return img;
+        double scale = Math.min((double) MAX_DIMENSION / w, (double) MAX_DIMENSION / h);
+        int newW = (int) Math.round(w * scale);
+        int newH = (int) Math.round(h * scale);
+        BufferedImage scaled = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = scaled.createGraphics();
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.drawImage(img, 0, 0, newW, newH, null);
+        } finally {
+            g2.dispose();
+        }
+        img.flush();
+        return scaled;
+    }
 
     private int detectPageCount(Path pdf) {
         List<String> cmd = new ArrayList<>();

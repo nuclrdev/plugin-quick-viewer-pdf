@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -24,6 +26,11 @@ import javax.imageio.spi.ImageReaderSpi;
 public class PdfboxBackend implements PdfRenderBackend {
 
     private static volatile boolean imageIoProvidersRegistered;
+
+    // Caps output image size to prevent OOM on large-format PDFs (A1, A0, engineering drawings).
+    // At 2048 px max dimension a worst-case page is ~16 MB; at the old unlimited 200 DPI an A0
+    // page produces a ~185 MB BufferedImage that trips the OpenGL pipeline into a second copy.
+    private static final int MAX_DIMENSION = 2048;
 
     private PDDocument document;
     private PDFRenderer renderer;
@@ -64,8 +71,16 @@ public class PdfboxBackend implements PdfRenderBackend {
     @Override
     public BufferedImage renderPage(int pageIndex, float dpi) throws Exception {
         if (renderer == null) throw new IllegalStateException("No document open");
-        log.debug("PDFBox: rendering page {} at {} DPI", pageIndex, dpi);
-        return renderer.renderImageWithDPI(pageIndex, dpi, ImageType.RGB);
+        PDPage page = document.getPage(pageIndex);
+        PDRectangle box = page.getMediaBox();
+        float widthIn  = box.getWidth()  / 72f;
+        float heightIn = box.getHeight() / 72f;
+        float effectiveDpi = Math.min(dpi, Math.min(MAX_DIMENSION / widthIn, MAX_DIMENSION / heightIn));
+        if (effectiveDpi < dpi) {
+            log.debug("PDFBox: DPI capped {}->{} for {:.1f}x{:.1f}\" page", dpi, (int) effectiveDpi, widthIn, heightIn);
+        }
+        log.debug("PDFBox: rendering page {} at {} DPI", pageIndex, (int) effectiveDpi);
+        return renderer.renderImageWithDPI(pageIndex, effectiveDpi, ImageType.RGB);
     }
 
     @Override
