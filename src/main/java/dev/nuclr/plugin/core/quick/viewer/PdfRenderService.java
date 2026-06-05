@@ -1,13 +1,14 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
 import java.awt.image.BufferedImage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import javax.swing.SwingUtilities;
 
-import dev.nuclr.platform.plugin.NuclrResourcePath;
+import dev.nuclr.platform.plugin.NuclrResource;
 import dev.nuclr.plugin.core.quick.viewer.backend.CliBackend;
 import dev.nuclr.plugin.core.quick.viewer.backend.PdfRenderBackend;
 import dev.nuclr.plugin.core.quick.viewer.backend.PdfboxBackend;
@@ -60,13 +61,14 @@ public class PdfRenderService {
     /**
      * Load a new PDF document and render its first page.
      * Cancels any in-flight load or render.
+     * @param cancelled 
      */
-    public void loadDocument(NuclrResourcePath item,
+    public void loadDocument(NuclrResource item,
                              Consumer<RenderResult> onSuccess,
-                             Consumer<String> onError) {
+                             Consumer<String> onError, AtomicBoolean cancelled) {
         long myEpoch = requestEpoch.incrementAndGet();
         Thread.ofVirtual().name("pdf-load-" + myEpoch).start(() ->
-                doLoad(item, myEpoch, onSuccess, onError));
+                doLoad(item, myEpoch, onSuccess, onError, cancelled));
     }
 
     /**
@@ -122,17 +124,27 @@ public class PdfRenderService {
 
     // ----------------------------------------------------- internal load flow
 
-    private void doLoad(NuclrResourcePath item, long myEpoch,
+    private void doLoad(NuclrResource item, long myEpoch,
                         Consumer<RenderResult> onSuccess,
-                        Consumer<String> onError) {
+                        Consumer<String> onError, 
+                        AtomicBoolean cancelled) {
         try {
-            log.info("Loading PDF: {}", item.getName());
+            
+        		log.info("Loading PDF: {}", item.getName());
 
             // Read bytes off EDT (may involve network/slow FS)
             byte[] pdfBytes;
-            try (var in = item.openStream()) {
+            
+            try (var inRaw = item.openInputStream()) {
+            		var in = new CancelableInputStream(inRaw, cancelled); 
                 pdfBytes = in.readAllBytes();
             }
+            
+            if (cancelled.get()) {
+					log.info("PDF load cancelled: {}", item.getName());
+					return;
+			}
+            
             if (requestEpoch.get() != myEpoch) return;
 
             PdfRenderBackend backend = selectBackend();
@@ -178,7 +190,7 @@ public class PdfRenderService {
     }
 
     /** Retry with PDFBox when an optional CLI backend fails. */
-    private void fallbackLoad(NuclrResourcePath item, long myEpoch,
+    private void fallbackLoad(NuclrResource item, long myEpoch,
                               Consumer<RenderResult> onSuccess,
                               Consumer<String> onError) {
         if (activeBackend instanceof PdfboxBackend) {
@@ -189,7 +201,7 @@ public class PdfRenderService {
         log.warn("Primary backend failed; falling back to PDFBox for {}", item.getName());
         try {
             byte[] pdfBytes;
-            try (var in = item.openStream()) {
+            try (var in = java.nio.file.Files.newInputStream(item.getPath())) {
                 pdfBytes = in.readAllBytes();
             }
             if (requestEpoch.get() != myEpoch) return;
@@ -307,7 +319,7 @@ public class PdfRenderService {
         };
     }
 
-    private static String computeDocId(NuclrResourcePath item) {
-        return item.getName() + ":" + item.getSizeBytes();
+    private static String computeDocId(NuclrResource item) {
+        return item.getName() + ":" + item.getLength();
     }
 }

@@ -1,22 +1,22 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
-import java.util.List;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComponent;
 
+import org.apache.commons.io.FilenameUtils;
+
 import dev.nuclr.platform.NuclrThemeScheme;
-import dev.nuclr.platform.plugin.NuclrMenuResource;
-import dev.nuclr.platform.plugin.NuclrPlugin;
 import dev.nuclr.platform.plugin.NuclrPluginContext;
-import dev.nuclr.platform.plugin.NuclrPluginRole;
-import dev.nuclr.platform.plugin.NuclrResourcePath;
+import dev.nuclr.platform.plugin.NuclrResource;
+import dev.nuclr.platform.plugin.QuickViewNuclrPlugin;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class PdfQuickViewProvider implements NuclrPlugin {
+public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 
 	private static final String THEME_UPDATED_EVENT_TYPE = "dev.nuclr.platform.theme.updated";
 	private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("pdf");
@@ -36,13 +36,17 @@ public class PdfQuickViewProvider implements NuclrPlugin {
 	}
 
 	@Override
-	public List<NuclrMenuResource> menuItems(NuclrResourcePath source) {
-		return List.of();
+	public void preinit(NuclrPluginContext context) {
+		this.context = context;
 	}
 
 	@Override
-	public void load(NuclrPluginContext context, boolean isTemplate) {
-		this.context = context;
+	public void init() {
+	}
+
+	@Override
+	public NuclrPluginContext getContext() {
+		return this.context;
 	}
 
 	@Override
@@ -53,11 +57,17 @@ public class PdfQuickViewProvider implements NuclrPlugin {
 	}
 
 	@Override
-	public boolean supports(NuclrResourcePath resource) {
-		if (resource == null || resource.getExtension() == null) {
+	public boolean supports(Path path) {
+		String extension = extension(path);
+		if (extension == null) {
 			return false;
 		}
-		return SUPPORTED_EXTENSIONS.contains(resource.getExtension().toLowerCase(Locale.ROOT));
+		return SUPPORTED_EXTENSIONS.contains(extension.toLowerCase(Locale.ROOT));
+	}
+
+	private static String extension(Path path) {
+		var name = path.getFileName() != null ? path.getFileName().toString() : path.toString();
+		return FilenameUtils.getExtension(name);
 	}
 
 	@Override
@@ -66,7 +76,7 @@ public class PdfQuickViewProvider implements NuclrPlugin {
 	}
 
 	@Override
-	public boolean openResource(NuclrResourcePath resource, AtomicBoolean cancelled) {
+	public boolean openResource(NuclrResource resource, AtomicBoolean cancelled) {
 		if (currentCancelled != null) {
 			currentCancelled.set(true);
 		}
@@ -159,7 +169,7 @@ public class PdfQuickViewProvider implements NuclrPlugin {
 	}
 
 	@Override
-	public Developer type() {
+	public Developer developer() {
 		return Developer.Official;
 	}
 
@@ -168,12 +178,7 @@ public class PdfQuickViewProvider implements NuclrPlugin {
 	}
 
 	@Override
-	public NuclrPluginRole role() {
-		return NuclrPluginRole.QuickViewer;
-	}
-
-	@Override
-	public NuclrResourcePath getCurrentResource() {
+	public NuclrResource getCurrentResource() {
 		return null;
 	}
 

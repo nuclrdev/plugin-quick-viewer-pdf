@@ -27,7 +27,7 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import dev.nuclr.platform.NuclrThemeScheme;
-import dev.nuclr.platform.plugin.NuclrResourcePath;
+import dev.nuclr.platform.plugin.NuclrResource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -178,11 +178,11 @@ public class PdfQuickViewPanel extends JPanel {
      * Load a new PDF item. Called from the framework (EDT).
      * Returns true always; actual success/failure is reported asynchronously.
      */
-    public boolean load(NuclrResourcePath item, AtomicBoolean cancelled) {
+    public boolean load(NuclrResource item, AtomicBoolean cancelled) {
         if (cancelled.get()) return false;
         requestFocusInWindow();
         setLoading();
-        renderService.loadDocument(item, this::onRenderResult, this::onError);
+        renderService.loadDocument(item, this::onRenderResult, this::onError, cancelled);
         return true;
     }
 
