@@ -57,8 +57,8 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 	}
 
 	@Override
-	public boolean supports(Path path) {
-		String extension = extension(path);
+	public boolean supports(NuclrResource resource) {
+		String extension = extension(resource);
 		if (extension == null) {
 			return false;
 		}
@@ -70,6 +70,18 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 		return FilenameUtils.getExtension(name);
 	}
 
+	private static String extension(NuclrResource resource) {
+		if (resource == null || resource.getName() == null) {
+			return null;
+		}
+		String name = resource.getName();
+		int dot = name.lastIndexOf('.');
+		if (dot < 0 || dot == name.length() - 1) {
+			return null;
+		}
+		return name.substring(dot + 1);
+	}
+	
 	@Override
 	public int priority() {
 		return 1;
