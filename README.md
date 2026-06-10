@@ -1,16 +1,16 @@
-# PDF Quick Viewer 📄
+# 📄 PDF Quick Viewer
 
 A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in the quick-view panel. Press **Ctrl+Q** on any `.pdf` file to preview it without leaving the file manager.
 
 ---
 
-## Preview 🖼️
+## 🖼️ Preview
 
 ![PDF Quick Viewer screenshot](images/screenshot-1.jpg)
 
 ---
 
-## Features ✨
+## ✨ Features
 
 - **Page-accurate rendering** — every page is rasterized to a crisp RGB image via Apache PDFBox
 - **Page navigation** — move between pages with on-screen buttons, keyboard shortcuts, or a direct page-number jump
@@ -18,13 +18,13 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 - **LRU page cache** — recently viewed pages are kept in memory so navigation feels instant
 - **Cancellation-aware** — switching files mid-render immediately aborts the in-flight job; no stale frames ever reach the UI
 - **Encrypted PDF handling** — password-protected files display a clear message instead of crashing
-- **JBIG2 support** — bundled `jbig2-imageio` support allows PDFBox to render scanned PDFs that use JBIG2-compressed images
+- **JBIG2 support** — bundled `jbig2-imageio` allows PDFBox to render scanned PDFs that use JBIG2-compressed images
 - **Optional CLI backends** — can delegate rendering to MuPDF, Poppler, or Ghostscript when installed; falls back to PDFBox automatically on any failure
 - **Persistent settings** — DPI, overlay toggle, and backend choice survive restarts
 
 ---
 
-## Keyboard Shortcuts ⌨️
+## ⌨️ Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -36,11 +36,9 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 
 > The quick-view panel must have focus for keyboard shortcuts to work. Click the panel or press **Ctrl+Q** to focus it.
 
-You can also click the `Go to` button or the page label in the toolbar to enter a page number manually.
-
 ---
 
-## Settings ⚙️
+## ⚙️ Settings
 
 Settings are stored as a plain `.properties` file in the platform config directory:
 
@@ -50,76 +48,42 @@ Settings are stored as a plain `.properties` file in the platform config directo
 | macOS | `~/Library/Application Support/nuclr/pdf-quick-viewer.properties` |
 | Linux | `$XDG_CONFIG_HOME/nuclr/pdf-quick-viewer.properties` (or `~/.config/nuclr/`) |
 
-### Available keys
-
 | Key | Default | Description |
 |-----|---------|-------------|
-| `pdf.quickView.dpi` | `144` | Render resolution. Range: 36–200. Higher values are sharper but slower and use more memory. |
-| `pdf.quickView.cachePages` | `10` | Maximum number of rendered pages kept in the LRU cache. |
-| `pdf.quickView.showInfoOverlay` | `true` | Show the semi-transparent info panel over the page image. |
+| `pdf.quickView.dpi` | `144` | Render resolution. Range: 36–200. |
+| `pdf.quickView.cachePages` | `10` | Maximum rendered pages in the LRU cache. |
+| `pdf.quickView.showInfoOverlay` | `true` | Show the semi-transparent info panel. |
 | `pdf.quickView.backend` | `PDFBOX` | Rendering backend (see table below). |
 
-### Backends
+### 🔌 Backends
 
 | Value | Description |
 |-------|-------------|
-| `PDFBOX` | Apache PDFBox — pure Java, always available, no system tools needed. **Recommended.** |
-| `AUTO` | Try CLI tools in preference order (MuPDF → Poppler → Ghostscript); fall back to PDFBox. |
+| `PDFBOX` | Apache PDFBox — pure Java, always available. **Recommended.** |
+| `AUTO` | Try CLI tools in order (MuPDF → Poppler → Ghostscript); fall back to PDFBox. |
 | `CLI_MuTool` | MuPDF `mutool draw`. Requires `mutool` on `PATH`. |
 | `CLI_POPPLER` | Poppler `pdftocairo` or `pdftoppm`. Requires Poppler on `PATH`. |
 | `CLI_GS` | Ghostscript `gs`. Requires Ghostscript on `PATH`. |
 
-Any CLI backend failure is caught automatically and PDFBox is used as a fallback — the viewer will never go blank due to a missing tool.
+---
 
-**Example** — bump DPI and switch to auto-detect:
+## 📥 Installation
 
-```properties
-pdf.quickView.dpi=180
-pdf.quickView.backend=AUTO
-pdf.quickView.showInfoOverlay=true
+Copy the signed plugin archive and detached signature into the Nuclr Commander `plugins/` directory:
+
+```text
+quick-view-pdf-<version>.zip
+quick-view-pdf-<version>.zip.sig
 ```
+
+Nuclr Commander verifies the RSA-SHA256 signature against `nuclr-cert.pem` on load. The plugin becomes available immediately without a restart.
 
 ---
 
-## Building 🛠️
+## 🧱 Architecture
 
-Requires **Java 21+** and **Maven 3.9+**. The plugin SDK must be installed first:
-
-```bash
-# 1. Install the SDK (one-time)
-cd ../../..   # → nuclr/sources/platform-sdk
-mvn clean install
-
-# 2. Build the plugin ZIP (no signing)
-cd plugins/core/quick-viewer-pdf
-mvn clean package -Dmaven.verify.skip=true
-# Output: target/quick-view-pdf-1.0.0.zip
-```
-
-### Building with signing
-
-Signing requires the Nuclr keystore at `C:/nuclr/key/nuclr-signing.p12`:
-
-```bash
-mvn clean verify -Djarsigner.storepass=<password>
-# Output: target/quick-view-pdf-1.0.0.zip
-#         target/quick-view-pdf-1.0.0.zip.sig
-```
-
-### Deploy to Commander
-
-```batch
-deploy.bat
-```
-
-This runs `mvn clean verify` and copies the signed ZIP and `.sig` to `commander/plugins/`.
-
----
-
-## Architecture 🧱
-
-```
-PdfQuickViewProvider          implements QuickViewProviderPlugin
+```text
+PdfQuickViewProvider          implements QuickViewNuclrPlugin
 └── PdfQuickViewPanel         Swing JPanel — all state is EDT-only
     └── PdfRenderService      virtual-thread orchestrator
         ├── PdfPageCache      thread-safe LRU (LinkedHashMap, access-order)
@@ -130,25 +94,28 @@ PdfQuickViewProvider          implements QuickViewProviderPlugin
             └── CliBackend         MuPDF / Poppler / Ghostscript
 ```
 
-### Threading model 🧵
+### 🧵 Threading model
 
 - **EDT** — UI state reads/writes, Swing repaints, button callbacks
 - **Virtual threads** (`Thread.ofVirtual()`) — byte reading, document opening, page rendering
-- **Cancellation** — a monotonic `AtomicLong` epoch is incremented on every new request; any virtual thread that finishes late sees the stale epoch and silently discards its result
-- **Backend lock** — a `ReentrantLock` serializes `openDocument` and `renderPage` calls on the active backend, preventing concurrent access to a non-thread-safe `PDFRenderer`
-
-### Bundled dependencies (in `lib/`)
-
-| Artifact | Version | License |
-|----------|---------|---------|
-| `pdfbox` | 3.0.7 | Apache 2.0 |
-| `pdfbox-io` | 3.0.7 | Apache 2.0 |
-| `fontbox` | 3.0.7 | Apache 2.0 |
-| `commons-logging` | 1.3.5 | Apache 2.0 |
-| `jbig2-imageio` | 3.0.4 | Apache 2.0 |
+- **Cancellation** — a monotonic `AtomicLong` epoch is incremented on every new request; stale results are silently discarded
+- **Backend lock** — a `ReentrantLock` serializes `openDocument` and `renderPage` to prevent concurrent access to a non-thread-safe `PDFRenderer`
 
 ---
 
-## License 📄
+## 📚 Dependencies
+
+| Library | Version | Purpose |
+|---|---|---|
+| `dev.nuclr:platform-sdk` | `3.0.1` | Nuclr platform interfaces |
+| `pdfbox` | `3.0.7` | PDF rendering (Apache PDFBox) |
+| `pdfbox-io` | `3.0.7` | PDFBox I/O utilities |
+| `fontbox` | `3.0.7` | Font handling for PDFBox |
+| `commons-logging` | `1.3.5` | Logging bridge |
+| `jbig2-imageio` | `3.0.4` | JBIG2-compressed image support |
+
+---
+
+## 📜 License
 
 Apache 2.0 — see [LICENSE](LICENSE).

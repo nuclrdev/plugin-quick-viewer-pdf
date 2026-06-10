@@ -147,7 +147,18 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 
 	@Override
 	public String version() {
-		return "1.0.0";
+		return loadVersion();
+	}
+
+	private static String loadVersion() {
+		try (var stream = PdfQuickViewProvider.class.getResourceAsStream("/plugin.properties")) {
+			if (stream == null) return "unknown";
+			var props = new java.util.Properties();
+			props.load(stream);
+			return props.getProperty("version", "unknown");
+		} catch (java.io.IOException e) {
+			return "unknown";
+		}
 	}
 
 	@Override
