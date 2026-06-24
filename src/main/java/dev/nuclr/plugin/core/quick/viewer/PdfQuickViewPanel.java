@@ -2,16 +2,19 @@ package dev.nuclr.plugin.core.quick.viewer;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -209,6 +212,7 @@ public class PdfQuickViewPanel extends JPanel {
         currentImage     = null;
         currentPageIndex = 0;
         statusMessage    = "No PDF selected";
+        pageCanvas.resetView();
         pageCanvas.repaint();
         updateNavigation();
     }
@@ -232,6 +236,7 @@ public class PdfQuickViewPanel extends JPanel {
         currentImage     = result.image();
         currentPageIndex = result.pageIndex();
         statusMessage    = null;
+        pageCanvas.resetView();
         pageCanvas.repaint();
         updateNavigation();
     }
@@ -315,9 +320,131 @@ public class PdfQuickViewPanel extends JPanel {
 
     private class PageCanvas extends JPanel {
 
+        private static final double MIN_ZOOM  = 1.0;
+        private static final double MAX_ZOOM  = 16.0;
+        private static final double ZOOM_STEP = 1.15;
+
+        /** Zoom multiplier applied on top of the fit-to-panel scale. 1.0 == fit. */
+        private double zoom = 1.0;
+        /** Pan offset (in panel pixels) relative to the centered position. */
+        private double offsetX = 0.0;
+        private double offsetY = 0.0;
+        private Point  lastDragPoint;
+
         PageCanvas() {
             setBackground(canvasBackground);
             setOpaque(true);
+
+            addMouseWheelListener(this::handleMouseWheel);
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    // Keep keyboard navigation working after interacting with the page.
+                    PdfQuickViewPanel.this.requestFocusInWindow();
+                    if (SwingUtilities.isLeftMouseButton(e) && isZoomed()) {
+                        lastDragPoint = e.getPoint();
+                    }
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    lastDragPoint = null;
+                    updateCursor();
+                }
+            });
+            addMouseMotionListener(new MouseAdapter() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    if (lastDragPoint == null) return;
+                    offsetX += e.getX() - lastDragPoint.x;
+                    offsetY += e.getY() - lastDragPoint.y;
+                    lastDragPoint = e.getPoint();
+                    clampOffsets();
+                    repaint();
+                }
+            });
+        }
+
+        /** Reset zoom and pan back to the fit view. Called whenever a new page is shown. */
+        void resetView() {
+            zoom          = 1.0;
+            offsetX       = 0.0;
+            offsetY       = 0.0;
+            lastDragPoint = null;
+            updateCursor();
+        }
+
+        private boolean isZoomed() {
+            return currentImage != null && zoom > MIN_ZOOM;
+        }
+
+        private void updateCursor() {
+            setCursor(Cursor.getPredefinedCursor(isZoomed() ? Cursor.MOVE_CURSOR : Cursor.DEFAULT_CURSOR));
+        }
+
+        /** Fit-to-panel scale (contain), capped so the page is never upscaled at zoom 1.0. */
+        private double baseScale() {
+            if (currentImage == null) return 1.0;
+            int panelW = getWidth();
+            int panelH = getHeight();
+            int imgW   = currentImage.getWidth();
+            int imgH   = currentImage.getHeight();
+            if (panelW <= 0 || panelH <= 0 || imgW <= 0 || imgH <= 0) return 1.0;
+            double fit = Math.min((double) panelW / imgW, (double) panelH / imgH);
+            return Math.min(1.0, fit);
+        }
+
+        private void handleMouseWheel(MouseWheelEvent e) {
+            // Only zoom while Ctrl is held; otherwise leave the event alone.
+            if (currentImage == null || !e.isControlDown()) return;
+
+            double base    = baseScale();
+            double oldZoom = zoom;
+            // Wheel up (negative rotation) zooms in, wheel down zooms out.
+            double factor  = Math.pow(ZOOM_STEP, -e.getPreciseWheelRotation());
+            double newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, oldZoom * factor));
+
+            // Snap to actual size (100%) when the on-screen scale lands near it (96%–104%).
+            double snappedScale = base * newZoom;
+            if (snappedScale >= 0.96 && snappedScale <= 1.04) {
+                newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, 1.0 / base));
+            }
+            if (newZoom == oldZoom) return;
+
+            // Keep the page point under the cursor anchored while zooming.
+            double oldScale = base * oldZoom;
+            double newScale = base * newZoom;
+            int imgW = currentImage.getWidth();
+            int imgH = currentImage.getHeight();
+
+            double oldImgX = (getWidth()  - imgW * oldScale) / 2.0 + offsetX;
+            double oldImgY = (getHeight() - imgH * oldScale) / 2.0 + offsetY;
+            double pixelX  = (e.getX() - oldImgX) / oldScale;
+            double pixelY  = (e.getY() - oldImgY) / oldScale;
+
+            zoom    = newZoom;
+            offsetX = e.getX() - pixelX * newScale - (getWidth()  - imgW * newScale) / 2.0;
+            offsetY = e.getY() - pixelY * newScale - (getHeight() - imgH * newScale) / 2.0;
+
+            clampOffsets();
+            updateCursor();
+            repaint();
+        }
+
+        /** Constrain the pan offset so a zoomed page can't be dragged completely off-screen. */
+        private void clampOffsets() {
+            if (currentImage == null) {
+                offsetX = 0.0;
+                offsetY = 0.0;
+                return;
+            }
+            double scale = baseScale() * zoom;
+            double drawW = currentImage.getWidth()  * scale;
+            double drawH = currentImage.getHeight() * scale;
+            double maxX  = Math.max(0.0, (drawW - getWidth())  / 2.0);
+            double maxY  = Math.max(0.0, (drawH - getHeight()) / 2.0);
+            offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+            offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
         }
 
         @Override
@@ -334,10 +461,11 @@ public class PdfQuickViewPanel extends JPanel {
                 }
 
                 if (currentImage != null) {
-                    drawPageImage(g2, currentImage);
+                    double scale = drawPageImage(g2, currentImage);
                     if (settings.isShowInfoOverlay() && currentInfo != null) {
                         drawInfoOverlay(g2, currentInfo);
                     }
+                    drawZoomIndicator(g2, scale);
                 }
             } finally {
                 g2.dispose();
@@ -346,29 +474,53 @@ public class PdfQuickViewPanel extends JPanel {
 
         // ---- drawing helpers
 
-        private void drawPageImage(Graphics2D g2, BufferedImage img) {
+        /** Draws the page with the current fit-scale, zoom and pan; returns the on-screen scale. */
+        private double drawPageImage(Graphics2D g2, BufferedImage img) {
             int panelW = getWidth();
             int panelH = getHeight();
-            if (panelW <= 0 || panelH <= 0) return;
+            if (panelW <= 0 || panelH <= 0) return 1.0;
 
             int imgW = img.getWidth();
             int imgH = img.getHeight();
-            if (imgW <= 0 || imgH <= 0) return;
+            if (imgW <= 0 || imgH <= 0) return 1.0;
 
-            // Fit-inside scaling — never upscale
-            double scale = Math.min(1.0,
-                    Math.min((double) panelW / imgW, (double) panelH / imgH));
+            // Fit-inside scale (never upscaling at zoom 1.0), with the user zoom on top.
+            double scale = baseScale() * zoom;
 
             int drawW = (int) Math.round(imgW * scale);
             int drawH = (int) Math.round(imgH * scale);
-            int x     = (panelW - drawW) / 2;
-            int y     = (panelH - drawH) / 2;
+            int x     = (panelW - drawW) / 2 + (int) Math.round(offsetX);
+            int y     = (panelH - drawH) / 2 + (int) Math.round(offsetY);
 
             g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                     scale < 1.0 ? RenderingHints.VALUE_INTERPOLATION_BILINEAR
                                 : RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
             g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             g2.drawImage(img, x, y, drawW, drawH, null);
+            return scale;
+        }
+
+        /** Draws the current on-screen scale (relative to the rendered page pixels) bottom-right. */
+        private void drawZoomIndicator(Graphics2D g2, double scale) {
+            String text = Math.round(scale * 100) + "%";
+
+            Font font = getFont().deriveFont(Font.PLAIN, 11f);
+            g2.setFont(font);
+            FontMetrics fm = g2.getFontMetrics(font);
+
+            int padX = 8;
+            int padY = 4;
+            int boxW = fm.stringWidth(text) + padX * 2;
+            int boxH = fm.getAscent() + fm.getDescent() + padY * 2;
+            int margin = 10;
+            int bx = getWidth()  - boxW - margin;
+            int by = getHeight() - boxH - margin;
+
+            g2.setColor(overlayBackground);
+            g2.fillRoundRect(bx, by, boxW, boxH, 8, 8);
+
+            g2.setColor(overlayForeground);
+            g2.drawString(text, bx + padX, by + padY + fm.getAscent());
         }
 
         private void drawCenteredMessage(Graphics2D g2, String msg) {
