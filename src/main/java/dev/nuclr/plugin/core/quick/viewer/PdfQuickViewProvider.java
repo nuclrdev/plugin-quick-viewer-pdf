@@ -24,12 +24,14 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 	private NuclrPluginContext context;
 	private PdfQuickViewPanel panel;
 	private volatile AtomicBoolean currentCancelled;
+	private NuclrThemeScheme themeScheme;
 	private String uuid = java.util.UUID.randomUUID().toString();
 
 	@Override
 	public JComponent panel() {
 		if (panel == null) {
 			panel = new PdfQuickViewPanel();
+			panel.applyTheme(themeScheme != null ? themeScheme : context != null ? context.getTheme() : null);
 			log.info("PdfQuickViewPanel created");
 		}
 		return panel;
@@ -38,6 +40,7 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 	@Override
 	public void preinit(NuclrPluginContext context) {
 		this.context = context;
+		this.themeScheme = context != null ? context.getTheme() : null;
 	}
 
 	@Override
@@ -198,6 +201,10 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 
 	@Override
 	public void updateTheme(NuclrThemeScheme themeScheme) {
+		this.themeScheme = themeScheme;
+		if (panel != null) {
+			panel.applyTheme(themeScheme);
+		}
 	}
 
 	@Override

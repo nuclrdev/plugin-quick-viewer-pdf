@@ -25,6 +25,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import dev.nuclr.platform.NuclrThemeScheme;
 import dev.nuclr.platform.plugin.NuclrResource;
@@ -141,20 +142,20 @@ public class PdfQuickViewPanel extends JPanel {
     }
 
     public void applyTheme(NuclrThemeScheme theme) {
-        if (theme == null) {
-            return;
-        }
-
-        canvasBackground = theme.color("Panel.background", canvasBackground);
-        toolbarBackground = theme.color("TableHeader.background", toolbarBackground);
-        secondaryForeground = theme.color("Label.foreground", secondaryForeground);
-        Color overlayBase = theme.color("PopupMenu.background", overlayBackground);
-        overlayBackground = new Color(
+        // The active FlatLaf theme is reflected in UIManager defaults (the base look-and-feel
+        // is rebuilt before plugins are notified). The scheme's own palette only carries a
+        // handful of overrides, so UIManager is the authoritative source for these keys; fall
+        // back to the scheme palette and finally to the existing hardcoded colors.
+        canvasBackground    = themeColor(theme, "Panel.background", canvasBackground);
+        toolbarBackground   = themeColor(theme, "TableHeader.background", toolbarBackground);
+        secondaryForeground = themeColor(theme, "Label.foreground", secondaryForeground);
+        Color overlayBase   = themeColor(theme, "PopupMenu.background", overlayBackground);
+        overlayBackground   = new Color(
                 overlayBase.getRed(),
                 overlayBase.getGreen(),
                 overlayBase.getBlue(),
                 168);
-        overlayForeground = theme.color("Panel.foreground", overlayForeground);
+        overlayForeground   = themeColor(theme, "Panel.foreground", overlayForeground);
 
         setBackground(canvasBackground);
         toolbar.setBackground(toolbarBackground);
@@ -162,14 +163,29 @@ public class PdfQuickViewPanel extends JPanel {
         overlayCheck.setForeground(secondaryForeground);
         pageCanvas.setBackground(canvasBackground);
 
-        Font defaultFont = theme.defaultFont();
-        pageLabel.setFont(defaultFont);
-        overlayCheck.setFont(defaultFont);
-        prevButton.setFont(defaultFont);
-        nextButton.setFont(defaultFont);
-        goToButton.setFont(defaultFont);
+        Font defaultFont = theme != null ? theme.defaultFont() : UIManager.getFont("defaultFont");
+        if (defaultFont != null) {
+            pageLabel.setFont(defaultFont);
+            overlayCheck.setFont(defaultFont);
+            prevButton.setFont(defaultFont);
+            nextButton.setFont(defaultFont);
+            goToButton.setFont(defaultFont);
+        }
 
         repaint();
+    }
+
+    /**
+     * Resolve a themed color, preferring the live {@link UIManager} defaults (which reflect the
+     * active FlatLaf theme), then the scheme's override palette, then {@code fallback}.
+     */
+    private static Color themeColor(NuclrThemeScheme theme, String key, Color fallback) {
+        Color fromUi = UIManager.getColor(key);
+        if (fromUi != null) {
+            // Strip any UIResource wrapper so later mutations/comparisons are plain Colors.
+            return new Color(fromUi.getRed(), fromUi.getGreen(), fromUi.getBlue(), fromUi.getAlpha());
+        }
+        return theme != null ? theme.color(key, fallback) : fallback;
     }
 
     // ============================================================ public API
