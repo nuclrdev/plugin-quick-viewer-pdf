@@ -14,6 +14,7 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 
 - **Page-accurate rendering** — every page is rasterized to a crisp RGB image via Apache PDFBox
 - **Page navigation** — move between pages with on-screen buttons, keyboard shortcuts, or a direct page-number jump
+- **Zoom & pan** — `Ctrl`+scroll zooms with the page point under the cursor anchored; drag to pan when zoomed. Zoom and pan reset on every page change
 - **Info overlay** — semi-transparent HUD showing title, author, page count, PDF version, and render DPI
 - **LRU page cache** — recently viewed pages are kept in memory so navigation feels instant
 - **Cancellation-aware** — switching files mid-render immediately aborts the in-flight job; no stale frames ever reach the UI
@@ -33,6 +34,8 @@ A [Nuclr Commander](https://nuclr.dev) plugin that renders PDF files directly in
 | `Home` | First page |
 | `End` | Last page |
 | `Ctrl+G` | Prompt for a page number and jump within the valid range |
+| `Ctrl` + scroll | Zoom in / out |
+| Mouse drag | Pan (only when zoomed in) |
 
 > The quick-view panel must have focus for keyboard shortcuts to work. Click the panel or press **Ctrl+Q** to focus it.
 
