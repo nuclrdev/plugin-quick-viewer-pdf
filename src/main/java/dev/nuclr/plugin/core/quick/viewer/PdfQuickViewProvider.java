@@ -85,10 +85,6 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 		return name.substring(dot + 1);
 	}
 	
-	@Override
-	public int priority() {
-		return 1;
-	}
 
 	@Override
 	public boolean openResource(NuclrResource resource, AtomicBoolean cancelled) {
@@ -126,78 +122,6 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 		return false;
 	}
 
-	/*
-	 * 
-	 * { "schemaVersion": 1, "name": "PDF Quick Viewer", "id":
-	 * "dev.nuclr.plugin.core.quickviewer.pdf", "version": "1.0.0", "description":
-	 * "A quick viewer for PDF files.", "author": "Nuclr Development Team",
-	 * "license": "Apache-2.0", "website": "https://nuclr.dev", "pageUrl":
-	 * "https://nuclr.dev/plugins/core/pdf-quick-viewer.html", "docUrl":
-	 * "https://nuclr.dev/plugins/core/pdf-quick-viewer.html", "type": "Official",
-	 * "quickViewProviders": [
-	 * "dev.nuclr.plugin.core.quick.viewer.PdfQuickViewProvider" ] }
-	 */
-
-	@Override
-	public String id() {
-		return "dev.nuclr.plugin.core.quickviewer.pdf";
-	}
-
-	@Override
-	public String name() {
-		return "PDF Quick Viewer";
-	}
-
-	@Override
-	public String version() {
-		return loadVersion();
-	}
-
-	private static String loadVersion() {
-		try (var stream = PdfQuickViewProvider.class.getResourceAsStream("/plugin.properties")) {
-			if (stream == null) return "unknown";
-			var props = new java.util.Properties();
-			props.load(stream);
-			return props.getProperty("version", "unknown");
-		} catch (java.io.IOException e) {
-			return "unknown";
-		}
-	}
-
-	@Override
-	public String description() {
-		return "A quick viewer for PDF files.";
-	}
-
-	@Override
-	public String author() {
-		return "Nuclr Development Team";
-	}
-
-	@Override
-	public String license() {
-		return "Apache-2.0";
-	}
-
-	@Override
-	public String website() {
-		return "https://nuclr.dev";
-	}
-
-	@Override
-	public String pageUrl() {
-		return "https://nuclr.dev/plugins/core/pdf-quick-viewer.html";
-	}
-
-	@Override
-	public String docUrl() {
-		return "https://nuclr.dev/plugins/core/pdf-quick-viewer.html";
-	}
-
-	@Override
-	public Developer developer() {
-		return Developer.Official;
-	}
 
 	@Override
 	public void updateTheme(NuclrThemeScheme themeScheme) {
@@ -216,5 +140,6 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 	public String uuid() {
 		return uuid;
 	}
+
 
 }
