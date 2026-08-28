@@ -201,7 +201,9 @@ public class PdfRenderService {
         log.warn("Primary backend failed; falling back to PDFBox for {}", item.getName());
         try {
             byte[] pdfBytes;
-            try (var in = java.nio.file.Files.newInputStream(item.getPath())) {
+            // Through the resource, not its path: the primary load does the same, and a
+            // resource with no local file must fall back just as well as one with.
+            try (var in = item.openInputStream()) {
                 pdfBytes = in.readAllBytes();
             }
             if (requestEpoch.get() != myEpoch) return;
