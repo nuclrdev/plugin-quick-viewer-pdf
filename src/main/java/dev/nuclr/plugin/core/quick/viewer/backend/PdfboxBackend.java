@@ -83,6 +83,37 @@ public class PdfboxBackend implements PdfRenderBackend {
         return renderer.renderImageWithDPI(pageIndex, effectiveDpi, ImageType.RGB);
     }
 
+    /**
+     * Render the first page of a PDF no larger than the given box.
+     *
+     * <p>Stateless: it opens and closes a document of its own, so it can run
+     * concurrently with, and never disturbs, the document an instance has open.
+     *
+     * @return the page, or {@code null} for a document with no pages
+     * @throws EncryptedPdfException if the PDF requires a password
+     */
+    public static BufferedImage renderFirstPage(byte[] pdfBytes, int maxWidth, int maxHeight) throws Exception {
+        ensureImageIoProvidersRegistered();
+        try (PDDocument doc = Loader.loadPDF(pdfBytes)) {
+            if (doc.getNumberOfPages() == 0) {
+                return null;
+            }
+            PDPage page = doc.getPage(0);
+            PDRectangle box = page.getCropBox();
+            boolean sideways = page.getRotation() % 180 != 0;
+            float width = sideways ? box.getHeight() : box.getWidth();
+            float height = sideways ? box.getWidth() : box.getHeight();
+            if (width <= 0 || height <= 0) {
+                return null;
+            }
+            PDFRenderer pageRenderer = new PDFRenderer(doc);
+            pageRenderer.setSubsamplingAllowed(true);
+            return pageRenderer.renderImage(0, Math.min(maxWidth / width, maxHeight / height), ImageType.RGB);
+        } catch (InvalidPasswordException e) {
+            throw new EncryptedPdfException();
+        }
+    }
+
     @Override
     public void closeDocument() {
         renderer = null;

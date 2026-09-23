@@ -1,5 +1,6 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
+import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
@@ -13,6 +14,7 @@ import dev.nuclr.platform.NuclrThemeScheme;
 import dev.nuclr.platform.plugin.NuclrPluginContext;
 import dev.nuclr.platform.plugin.NuclrResource;
 import dev.nuclr.platform.plugin.QuickViewNuclrPlugin;
+import dev.nuclr.plugin.core.quick.viewer.backend.PdfboxBackend;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -95,6 +97,33 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 		panel();
 		log.info("Opening PDF quick view: {}", resource.getName());
 		return panel.load(resource, cancelled);
+	}
+
+	@Override
+	public boolean supportsThumbnails() {
+		return true;
+	}
+
+	@Override
+	public BufferedImage thumbnail(NuclrResource resource, int maxWidth, int maxHeight, AtomicBoolean cancelled) {
+		if (resource == null || maxWidth <= 0 || maxHeight <= 0 || !supports(resource)) {
+			return null;
+		}
+		try {
+			byte[] pdfBytes;
+			try (var in = new CancelableInputStream(resource.openInputStream(), cancelled)) {
+				pdfBytes = in.readAllBytes();
+			}
+			if (cancelled != null && cancelled.get()) {
+				return null;
+			}
+			// Always PDFBox: it is in-process and needs no per-document state, where
+			// the optional CLI backends are tied to the document an instance has open.
+			return ThumbnailScaler.fit(PdfboxBackend.renderFirstPage(pdfBytes, maxWidth, maxHeight), maxWidth, maxHeight);
+		} catch (Exception e) {
+			log.debug("No thumbnail for {}: {}", resource.getName(), e.toString());
+			return null;
+		}
 	}
 
 	@Override

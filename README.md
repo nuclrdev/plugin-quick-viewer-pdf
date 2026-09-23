@@ -70,6 +70,12 @@ Settings are stored as a plain `.properties` file in the platform config directo
 
 ---
 
+## 🖼️ Thumbnail
+
+The first page, rendered by PDFBox at the scale that fits the box, honouring page rotation. It is always PDFBox, whichever backend the panel uses, and a document of its own, so a thumbnail never touches the PDF on screen. An encrypted PDF has no thumbnail.
+
+It implements the platform SDK 6.0.0 thumbnail methods, so plugins that want a picture of a file - attachment chips in AI Projects, for one - get it through Commander.
+
 ## 📥 Installation
 
 Copy the signed plugin archive and detached signature into the Nuclr Commander `plugins/` directory:
@@ -110,7 +116,7 @@ PdfQuickViewProvider          implements QuickViewNuclrPlugin
 
 | Library | Version | Purpose |
 |---|---|---|
-| `dev.nuclr:platform-sdk` | `3.0.1` | Nuclr platform interfaces |
+| `dev.nuclr:platform-sdk` | `6.0.0` | Nuclr platform interfaces |
 | `pdfbox` | `3.0.7` | PDF rendering (Apache PDFBox) |
 | `pdfbox-io` | `3.0.7` | PDFBox I/O utilities |
 | `fontbox` | `3.0.7` | Font handling for PDFBox |
