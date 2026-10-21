@@ -1,5 +1,7 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
+import static dev.nuclr.plugin.core.quick.viewer.Messages.tr;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -51,7 +53,7 @@ public class PdfQuickViewPanel extends JPanel {
     private PdfDocumentInfo currentInfo;
     private BufferedImage   currentImage;
     private int             currentPageIndex;
-    private String          statusMessage = "No PDF selected";
+    private String          statusMessage = tr("panel.no.pdf");
 
     // ---------------------------------------------------------------- services
 
@@ -86,8 +88,8 @@ public class PdfQuickViewPanel extends JPanel {
         prevButton  = new JButton("\u25C0");  // ◀
         nextButton  = new JButton("\u25B6");  // ▶
         pageLabel   = new JLabel("", SwingConstants.CENTER);
-        goToButton  = new JButton("Go to");
-        overlayCheck = new JCheckBox("Info", settings.isShowInfoOverlay());
+        goToButton  = new JButton(tr("panel.go.to"));
+        overlayCheck = new JCheckBox(tr("panel.info"), settings.isShowInfoOverlay());
 
         prevButton.setFocusable(false);
         nextButton.setFocusable(false);
@@ -95,7 +97,7 @@ public class PdfQuickViewPanel extends JPanel {
         overlayCheck.setFocusable(false);
 
         pageLabel.setForeground(secondaryForeground);
-        pageLabel.setToolTipText("Click to jump to a page");
+        pageLabel.setToolTipText(tr("panel.page.tooltip"));
         overlayCheck.setForeground(secondaryForeground);
         overlayCheck.setOpaque(false);
         overlayCheck.setBorderPainted(false);
@@ -211,7 +213,7 @@ public class PdfQuickViewPanel extends JPanel {
         currentInfo      = null;
         currentImage     = null;
         currentPageIndex = 0;
-        statusMessage    = "No PDF selected";
+        statusMessage    = tr("panel.no.pdf");
         pageCanvas.resetView();
         pageCanvas.repaint();
         updateNavigation();
@@ -221,7 +223,7 @@ public class PdfQuickViewPanel extends JPanel {
 
     private void setLoading() {
         // Called from EDT
-        statusMessage    = "Loading\u2026";
+        statusMessage    = tr("panel.loading");
         currentImage     = null;
         currentInfo      = null;
         currentPageIndex = 0;
@@ -260,7 +262,7 @@ public class PdfQuickViewPanel extends JPanel {
         int bounded = Math.max(0, Math.min(pageIndex, currentInfo.pageCount() - 1));
         if (bounded == currentPageIndex) return;
         currentPageIndex = bounded;
-        statusMessage    = "Loading\u2026";
+        statusMessage    = tr("panel.loading");
         pageCanvas.repaint();
         updateNavigation();
         renderService.renderPage(bounded, this::onRenderResult, this::onError);
@@ -274,7 +276,7 @@ public class PdfQuickViewPanel extends JPanel {
         int totalPages = currentInfo.pageCount();
         String input = JOptionPane.showInputDialog(
                 this,
-                "Enter page number (1-" + totalPages + ")",
+                tr("goto.prompt", String.valueOf(totalPages)),
                 Integer.toString(currentPageIndex + 1));
 
         if (input == null) {
@@ -302,8 +304,8 @@ public class PdfQuickViewPanel extends JPanel {
     private void showPageValidationError(int totalPages) {
         JOptionPane.showMessageDialog(
                 this,
-                "Enter a page number between 1 and " + totalPages + ".",
-                "Invalid Page",
+                tr("goto.invalid.message", String.valueOf(totalPages)),
+                tr("goto.invalid.title"),
                 JOptionPane.WARNING_MESSAGE);
     }
 
@@ -313,7 +315,7 @@ public class PdfQuickViewPanel extends JPanel {
         prevButton.setEnabled(hasDoc && currentPageIndex > 0);
         nextButton.setEnabled(hasDoc && currentPageIndex < total - 1);
         goToButton.setEnabled(hasDoc);
-        pageLabel.setText(hasDoc ? "Page " + (currentPageIndex + 1) + " / " + total : "");
+        pageLabel.setText(hasDoc ? tr("panel.page", String.valueOf(currentPageIndex + 1), String.valueOf(total)) : "");
     }
 
     // ============================================================ inner canvas
@@ -563,13 +565,25 @@ public class PdfQuickViewPanel extends JPanel {
         }
 
         private String[] buildOverlayLines(PdfDocumentInfo info) {
+            String title = tr("overlay.title");
+            String author = tr("overlay.author");
+            String pages = tr("overlay.pages");
+            String page = tr("overlay.page");
+            String version = tr("overlay.version");
+            String dpi = tr("overlay.dpi");
+            // Values line up one space past the longest label.
+            int width = 0;
+            for (String label : List.of(title, author, pages, page, version, dpi)) {
+                width = Math.max(width, label.length() + 1);
+            }
+            String row = "%-" + (width + 1) + "s%s";
             List<String> lines = new ArrayList<>();
-            if (info.title()  != null) lines.add("Title:   " + clip(info.title(),  28));
-            if (info.author() != null) lines.add("Author:  " + clip(info.author(), 28));
-            lines.add("Pages:   " + info.pageCount());
-            lines.add("Page:    " + (currentPageIndex + 1) + " / " + info.pageCount());
-            if (info.pdfVersion() != null) lines.add("Version: " + info.pdfVersion());
-            lines.add("DPI:     " + settings.getDpi());
+            if (info.title()  != null) lines.add(String.format(row, title + ":", clip(info.title(),  28)));
+            if (info.author() != null) lines.add(String.format(row, author + ":", clip(info.author(), 28)));
+            lines.add(String.format(row, pages + ":", info.pageCount()));
+            lines.add(String.format(row, page + ":", (currentPageIndex + 1) + " / " + info.pageCount()));
+            if (info.pdfVersion() != null) lines.add(String.format(row, version + ":", info.pdfVersion()));
+            lines.add(String.format(row, dpi + ":", settings.getDpi()));
             return lines.toArray(String[]::new);
         }
 

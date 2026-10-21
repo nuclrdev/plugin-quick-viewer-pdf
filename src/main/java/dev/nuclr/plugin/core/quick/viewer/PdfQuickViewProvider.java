@@ -42,6 +42,9 @@ public class PdfQuickViewProvider implements QuickViewNuclrPlugin {
 	@Override
 	public void preinit(NuclrPluginContext context) {
 		this.context = context;
+		if (context != null) {
+			Messages.use(context.getLocale());
+		}
 		this.themeScheme = context != null ? context.getTheme() : null;
 	}
 

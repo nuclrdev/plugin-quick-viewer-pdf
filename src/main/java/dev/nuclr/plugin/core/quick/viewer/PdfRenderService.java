@@ -1,5 +1,7 @@
 package dev.nuclr.plugin.core.quick.viewer;
 
+import static dev.nuclr.plugin.core.quick.viewer.Messages.tr;
+
 import java.awt.image.BufferedImage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,7 +88,7 @@ public class PdfRenderService {
                 PdfDocumentInfo info = currentDocumentInfo;
                 SwingUtilities.invokeLater(() -> onSuccess.accept(new RenderResult(info, img, pageIndex)));
             } else {
-                SwingUtilities.invokeLater(() -> onError.accept("Failed to render page " + (pageIndex + 1)));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.render.page", String.valueOf(pageIndex + 1))));
             }
         });
     }
@@ -174,12 +176,12 @@ public class PdfRenderService {
             if (firstPage != null) {
                 SwingUtilities.invokeLater(() -> onSuccess.accept(new RenderResult(info, firstPage, 0)));
             } else {
-                SwingUtilities.invokeLater(() -> onError.accept("Failed to render first page"));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.render.first")));
             }
 
         } catch (PdfRenderBackend.EncryptedPdfException e) {
             if (requestEpoch.get() == myEpoch) {
-                SwingUtilities.invokeLater(() -> onError.accept("Encrypted PDF \u2013 cannot preview"));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.encrypted")));
             }
         } catch (Exception e) {
             log.error("Failed to load PDF: {}", item.getName(), e);
@@ -195,7 +197,7 @@ public class PdfRenderService {
                               Consumer<String> onError) {
         if (activeBackend instanceof PdfboxBackend) {
             // Already using PDFBox — nothing to fall back to
-            SwingUtilities.invokeLater(() -> onError.accept("Cannot render PDF"));
+            SwingUtilities.invokeLater(() -> onError.accept(tr("error.cannot.render")));
             return;
         }
         log.warn("Primary backend failed; falling back to PDFBox for {}", item.getName());
@@ -234,17 +236,17 @@ public class PdfRenderService {
             if (firstPage != null) {
                 SwingUtilities.invokeLater(() -> onSuccess.accept(new RenderResult(info, firstPage, 0)));
             } else {
-                SwingUtilities.invokeLater(() -> onError.accept("Failed to render PDF"));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.render.failed")));
             }
 
         } catch (PdfRenderBackend.EncryptedPdfException e) {
             if (requestEpoch.get() == myEpoch) {
-                SwingUtilities.invokeLater(() -> onError.accept("Encrypted PDF \u2013 cannot preview"));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.encrypted")));
             }
         } catch (Exception ex) {
             log.error("PDFBox fallback also failed for {}", item.getName(), ex);
             if (requestEpoch.get() == myEpoch) {
-                SwingUtilities.invokeLater(() -> onError.accept("Cannot render PDF: " + ex.getMessage()));
+                SwingUtilities.invokeLater(() -> onError.accept(tr("error.cannot.render.detail", ex.getMessage())));
             }
         }
     }
